@@ -17,7 +17,7 @@ from .service import (
 router = APIRouter(prefix="/api/auth")
 invite_router = APIRouter(prefix="/api/invites")
 
-COOKIE_OPTS = dict(httponly=True, samesite="lax", secure=False)
+COOKIE_OPTS = dict(httponly=True, samesite="lax", secure=True, path="/")
 
 
 @router.post("/login")

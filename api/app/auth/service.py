@@ -23,7 +23,7 @@ def verify_password(password: str, hashed: str) -> bool:
 def create_token(user_key: int, email: str, role: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(days=JWT_EXPIRE_DAYS)
     return jwt.encode(
-        {"sub": user_key, "email": email, "role": role, "exp": expire},
+        {"sub": str(user_key), "email": email, "role": role, "exp": expire},
         JWT_SECRET,
         algorithm=JWT_ALGORITHM,
     )

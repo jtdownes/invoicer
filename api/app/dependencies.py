@@ -10,7 +10,7 @@ def get_current_user(access_token: str = Cookie(default=None)) -> dict:
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
         payload = jwt.decode(access_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        user_key: int = payload.get("sub")
+        user_key = int(payload.get("sub"))
         if user_key is None:
             raise HTTPException(status_code=401, detail="Invalid token")
     except JWTError:
