@@ -38,7 +38,7 @@ export function Dashboard({ onNew }) {
         </button>
       </div>
 
-      <div className="px-4 md:px-8 py-4 md:py-6 max-w-5xl">
+      <div className="px-4 md:px-8 py-4 md:py-6">
 
         {/* Mobile greeting */}
         <div className="md:hidden mb-4">
