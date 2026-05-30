@@ -5,7 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .auth.router import invite_router, router as auth_router
 from .auth.service import seed_first_invite
+from .clients.router import router as clients_router
 from .config import CORS_ORIGINS, FIRST_INVITE_TOKEN
+from .invoices.router import router as invoices_router
 
 logging.basicConfig(level=logging.INFO)
 
@@ -21,6 +23,8 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(invite_router)
+app.include_router(clients_router)
+app.include_router(invoices_router)
 
 
 @app.on_event("startup")
