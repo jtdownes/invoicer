@@ -1,0 +1,52 @@
+services:
+
+  dc-invoicer-app:
+    image: node:20-slim
+    container_name: dc-invoicer-app
+    restart: unless-stopped
+    expose:
+      - "5173"
+    volumes:
+      - /mnt/TrueNAS/Apps/dockge/stacks/dc-invoicer/app:/app
+    working_dir: /app
+    command: sh -c "cd /app && rm -rf node_modules && npm install && npm run dev -- --host"
+    environment:
+      # ZFS mount doesn't fire inotify events reliably — poll for file changes
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    networks:
+      - downes-capital-network
+
+  dc-invoicer-api:
+    image: python:3.12-slim
+    container_name: dc-invoicer-api
+    restart: unless-stopped
+    expose:
+      - "7861"
+    volumes:
+      - /mnt/TrueNAS/Apps/dockge/stacks/dc-invoicer/api:/app
+      - /mnt/TrueNAS/Apps/dockge/stacks/dc-invoicer/.env:/app/.env:ro
+    working_dir: /app
+    env_file:
+      - .env
+    command: sh -c "cd /app && pip install --no-cache-dir -r requirements.txt && uvicorn app.main:app --host 0.0.0.0 --port 7861 --reload"
+    networks:
+      - downes-capital-network
+
+  dc-invoicer-nginx:
+    image: nginx:alpine
+    container_name: dc-invoicer-nginx
+    restart: unless-stopped
+    ports:
+      - "7860:80"
+    volumes:
+      - /mnt/TrueNAS/Apps/dockge/stacks/dc-invoicer/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - dc-invoicer-app
+      - dc-invoicer-api
+    networks:
+      - downes-capital-network
+
+networks:
+  downes-capital-network:
+    external: true

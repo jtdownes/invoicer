@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Invoica">
+  <meta name="theme-color" content="#4f46e5">
+  <title>Invoica</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none}
+    input,select,textarea,button{font-family:inherit;font-size:16px}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:#6366f1!important;box-shadow:0 0 0 3px rgba(99,102,241,.15)}
+    .paper{box-shadow:0 0 0 1px rgba(0,0,0,.06),0 4px 6px -1px rgba(0,0,0,.07),0 12px 40px rgba(0,0,0,.06)}
+    .nav-t{transition:background .12s,color .12s}
+    ::-webkit-scrollbar{width:4px}
+    ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:2px}
+    .safe-b{padding-bottom:max(12px,env(safe-area-inset-bottom))}
+  </style>
+</head>
+<body class="bg-gray-50">
+<div id="root"></div>
+<script type="module">
+import { html, render, useState } from 'https://unpkg.com/htm/preact/standalone.module.js';
+
+/* ── Icons ─────────────────────────────────────────────────────────────── */
+const SP = {
+  grid:    `<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>`,
+  file:    `<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>`,
+  users:   `<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>`,
+  layout:  `<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>`,
+  cog:     `<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>`,
+  plus:    `<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>`,
+  eye:     `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`,
+  eyeoff:  `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>`,
+  trash:   `<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/>`,
+  send:    `<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>`,
+  back:    `<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>`,
+  bell:    `<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>`,
+  check:   `<polyline points="20 6 9 17 4 12"/>`,
+  dollar:  `<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>`,
+  chevron: `<polyline points="9 18 15 12 9 6"/>`,
+};
+
+const Ic = ({ n, size=20, cls='' }) => html`
+  <svg width=${size} height=${size} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+    class=${cls} dangerouslySetInnerHTML=${{ __html: SP[n] }} />`;
+
+/* ── Helpers ────────────────────────────────────────────────────────────── */
+const fmt = n => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n);
+
+const Badge = ({ s }) => {
+  const m = {paid:['bg-emerald-50 text-emerald-700','bg-emerald-500','Paid'],outstanding:['bg-amber-50 text-amber-700','bg-amber-400','Outstanding'],overdue:['bg-red-50 text-red-700','bg-red-500','Overdue'],draft:['bg-gray-100 text-gray-500','bg-gray-400','Draft']}[s]||['bg-gray-100 text-gray-500','bg-gray-400',s];
+  return html`<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${m[0]}"><span class="w-1.5 h-1.5 rounded-full ${m[1]}"/>${m[2]}</span>`;
+};
+
+/* ── Mock Data ──────────────────────────────────────────────────────────── */
+const CLIENTS = [
+  {id:1,name:'Maplewood Properties', email:'accounts@maplewoodprop.com', addr:'142 Oak Street, Nashville, TN 37201'},
+  {id:2,name:'Blue Ridge HVAC',       email:'billing@blueridgehvac.com',  addr:'88 Industrial Pkwy, Murfreesboro, TN 37129'},
+  {id:3,name:'Sunrise Bakery',        email:'jen@sunrisebakery.co',       addr:'23 Main Street, Franklin, TN 37064'},
+  {id:4,name:'Harlow & Sons Plumbing',email:'office@harlowplumbing.com',  addr:'7 Commerce Drive, Smyrna, TN 37167'},
+  {id:5,name:'Greenfield Landscape',  email:'admin@greenfieldls.com',     addr:'330 Valley Rd, Brentwood, TN 37027'},
+];
+const INVOICES = [
+  {id:'INV-0041',client:'Maplewood Properties', amt:3200,issued:'May 8', due:'Jun 7', status:'paid',        viewed:true, viewedAt:'May 9 · 9:14 am'},
+  {id:'INV-0042',client:'Blue Ridge HVAC',       amt:840, issued:'May 15',due:'Jun 14',status:'outstanding',viewed:true, viewedAt:'May 16 · 2:30 pm'},
+  {id:'INV-0043',client:'Sunrise Bakery',        amt:650, issued:'Apr 28',due:'May 28',status:'overdue',    viewed:false,viewedAt:null},
+  {id:'INV-0044',client:'Harlow & Sons Plumbing',amt:1200,issued:'May 20',due:'Jun 19',status:'outstanding',viewed:false,viewedAt:null},
+  {id:'INV-0045',client:'Greenfield Landscape',  amt:430, issued:'May 23',due:'Jun 22',status:'draft',      viewed:false,viewedAt:null},
+];
+
+/* ── Sidebar (desktop) ──────────────────────────────────────────────────── */
+const NAV_ITEMS = [
+  {id:'dashboard',label:'Dashboard',n:'grid'},
+  {id:'invoices', label:'Invoices', n:'file'},
+  {id:'clients',  label:'Clients',  n:'users'},
+  {id:'templates',label:'Templates',n:'layout'},
+];
+
+const Sidebar = ({ view, setView, onNew }) => html`
+  <div class="hidden md:flex flex-col flex-shrink-0 bg-slate-900 h-screen" style="width:220px">
+    <div class="px-5 py-5 flex items-center gap-2.5">
+      <div class="w-7 h-7 bg-indigo-500 rounded-lg flex items-center justify-center">
+        <${Ic} n="dollar" size=${14} cls="text-white" />
+      </div>
+      <span class="text-white font-semibold text-sm">Invoica</span>
+    </div>
+    <div class="px-3 mb-4">
+      <button onClick=${onNew} class="w-full flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2.5 rounded-lg transition-colors">
+        <${Ic} n="plus" size=${14} /> New Invoice
+      </button>
+    </div>
+    <nav class="flex-1 px-2 space-y-0.5">
+      ${NAV_ITEMS.map(({ id, label, n }) => html`
+        <button key=${id} onClick=${() => setView(id)}
+          class="nav-t w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium text-left ${view===id?'bg-indigo-600 text-white':'text-slate-400 hover:text-white hover:bg-white/5'}">
+          <${Ic} n=${n} size=${16} />${label}
+        </button>`)}
+    </nav>
+    <div class="px-2 pb-5">
+      <button class="nav-t w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-white/5">
+        <${Ic} n="cog" size=${16} />Settings
+      </button>
+      <div class="mt-3 flex items-center gap-2.5 px-3 py-2">
+        <div class="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">JB</div>
+        <div class="min-w-0">
+          <div class="text-white text-xs font-medium truncate">Josh's Business</div>
+          <div class="text-slate-400 text-xs">Pro Plan</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+/* ── Mobile top bar ─────────────────────────────────────────────────────── */
+const MobileTopBar = ({ title, onNew }) => html`
+  <div class="flex md:hidden items-center justify-between px-4 py-3 bg-white border-b border-gray-200 sticky top-0 z-20">
+    <div class="flex items-center gap-2.5">
+      <div class="w-7 h-7 bg-indigo-500 rounded-lg flex items-center justify-center">
+        <${Ic} n="dollar" size=${13} cls="text-white" />
+      </div>
+      <span class="font-semibold text-sm text-gray-900">${title}</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="relative p-2 text-gray-400">
+        <${Ic} n="bell" size=${20} />
+        <span class="absolute top-2 right-2 w-1.5 h-1.5 bg-indigo-500 rounded-full"/>
+      </button>
+      <button onClick=${onNew} class="flex items-center gap-1 bg-indigo-600 text-white text-xs font-semibold py-2 px-3 rounded-lg">
+        <${Ic} n="plus" size=${13} />New
+      </button>
+    </div>
+  </div>`;
+
+/* ── Bottom nav (mobile) ────────────────────────────────────────────────── */
+const BottomNav = ({ view, setView, onNew }) => html`
+  <div class="flex md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-b z-30">
+    <div class="flex items-end justify-around w-full pt-1">
+      ${[{id:'dashboard',label:'Home',n:'grid'},{id:'invoices',label:'Invoices',n:'file'}].map(t => html`
+        <button key=${t.id} onClick=${() => setView(t.id)}
+          class="flex flex-col items-center gap-0.5 pb-2 px-3 pt-1 ${view===t.id?'text-indigo-600':'text-gray-400'}">
+          <${Ic} n=${t.n} size=${22} />
+          <span class="text-xs font-medium">${t.label}</span>
+        </button>`)}
+      <button onClick=${onNew} class="flex flex-col items-center pb-1 px-2 -mt-4">
+        <div class="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg shadow-indigo-300">
+          <${Ic} n="plus" size=${22} cls="text-white" />
+        </div>
+      </button>
+      ${[{id:'clients',label:'Clients',n:'users'},{id:'settings',label:'Settings',n:'cog'}].map(t => html`
+        <button key=${t.id} onClick=${() => setView(t.id)}
+          class="flex flex-col items-center gap-0.5 pb-2 px-3 pt-1 ${view===t.id?'text-indigo-600':'text-gray-400'}">
+          <${Ic} n=${t.n} size=${22} />
+          <span class="text-xs font-medium">${t.label}</span>
+        </button>`)}
+    </div>
+  </div>`;
+
+/* ── Desktop top bar ────────────────────────────────────────────────────── */
+const DesktopTopBar = ({ title, subtitle, onNew }) => html`
+  <div class="hidden md:flex items-center justify-between px-8 py-5 bg-white border-b border-gray-200 sticky top-0 z-10">
+    <div>
+      <h1 class="text-lg font-semibold text-gray-900">${title}</h1>
+      ${subtitle && html`<p class="text-xs text-gray-400 mt-0.5">${subtitle}</p>`}
+    </div>
+    <div class="flex items-center gap-3">
+      <button class="relative p-2 rounded-lg hover:bg-gray-100 text-gray-400">
+        <${Ic} n="bell" size=${18} />
+        <span class="absolute top-2 right-2 w-1.5 h-1.5 bg-indigo-500 rounded-full"/>
+      </button>
+      <button onClick=${onNew} class="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2 px-4 rounded-lg transition-colors">
+        <${Ic} n="plus" size=${14} />New Invoice
+      </button>
+    </div>
+  </div>`;
+
+/* ── Dashboard ──────────────────────────────────────────────────────────── */
+const Dashboard = ({ onNew }) => {
+  const outstanding = INVOICES.filter(i=>i.status==='outstanding');
+  const overdue     = INVOICES.filter(i=>i.status==='overdue');
+  const paid        = INVOICES.filter(i=>i.status==='paid');
+  const oAmt = outstanding.reduce((s,i)=>s+i.amt,0);
+  const dAmt = overdue.reduce((s,i)=>s+i.amt,0);
+  const pAmt = paid.reduce((s,i)=>s+i.amt,0);
+  const tAmt = INVOICES.reduce((s,i)=>s+i.amt,0);
+
+  return html`
+    <div class="flex-1 overflow-auto pb-20 md:pb-0">
+      <${MobileTopBar} title="Invoica" onNew=${onNew} />
+      <${DesktopTopBar} title="Dashboard" subtitle="Thursday, May 29, 2026" onNew=${onNew} />
+
+      <div class="md:hidden px-4 pt-4 pb-1">
+        <div class="text-lg font-bold text-gray-900">Good morning, Josh</div>
+        <div class="text-xs text-gray-400 mt-0.5">Thursday, May 29, 2026</div>
+      </div>
+
+      <div class="px-4 md:px-8 py-3 md:py-6 max-w-5xl">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          ${[
+            ['Total Billed',    fmt(tAmt), 'All time',               'text-gray-900'],
+            ['Outstanding',     fmt(oAmt), `${outstanding.length} invoices`, 'text-amber-600'],
+            ['Overdue',         fmt(dAmt), 'Action needed',          'text-red-600'],
+            ['Paid This Month', fmt(pAmt), '↑ 18% vs last month',    'text-emerald-600'],
+          ].map(([label,value,sub,vc]) => html`
+            <div key=${label} class="bg-white rounded-xl border border-gray-200 p-4">
+              <div class="text-xs text-gray-400 font-medium mb-1">${label}</div>
+              <div class="text-xl font-bold mb-0.5 leading-tight ${vc}">${value}</div>
+              <div class="text-xs text-gray-400">${sub}</div>
+            </div>`)}
+        </div>
+
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">
+          <div class="flex items-center justify-between px-4 md:px-6 py-3.5 border-b border-gray-100">
+            <h2 class="text-sm font-semibold text-gray-900">Recent Invoices</h2>
+            <button class="text-xs text-indigo-600 font-medium">View all</button>
+          </div>
+
+          <!-- Mobile cards -->
+          <div class="md:hidden divide-y divide-gray-100">
+            ${INVOICES.map(inv => html`
+              <div key=${inv.id} class="px-4 py-4 flex items-center gap-3 active:bg-gray-50">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between gap-2 mb-1.5">
+                    <span class="text-sm font-semibold text-gray-900 truncate">${inv.client}</span>
+                    <span class="text-sm font-bold text-gray-900 flex-shrink-0">${fmt(inv.amt)}</span>
+                  </div>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <${Badge} s=${inv.status} />
+                    <span class="text-xs text-gray-400">Due ${inv.due}</span>
+                    ${inv.viewed
+                      ? html`<span class="flex items-center gap-0.5 text-xs text-emerald-600 font-medium"><${Ic} n="eye" size=${12}/>Opened</span>`
+                      : html`<span class="flex items-center gap-0.5 text-xs text-gray-400"><${Ic} n="eyeoff" size=${12}/>Unseen</span>`}
+                  </div>
+                </div>
+                <${Ic} n="chevron" size=${16} cls="text-gray-300 flex-shrink-0" />
+              </div>`)}
+          </div>
+
+          <!-- Desktop table -->
+          <table class="hidden md:table w-full">
+            <thead>
+              <tr class="border-b border-gray-100">
+                ${['Invoice','Client','Amount','Status','Opened','Due',''].map((h,i) => html`
+                  <th key=${i} class="text-left text-xs font-medium text-gray-400 uppercase tracking-wide px-5 py-3">${h}</th>`)}
+              </tr>
+            </thead>
+            <tbody>
+              ${INVOICES.map((inv,i) => html`
+                <tr key=${inv.id} class="hover:bg-gray-50 transition-colors ${i<INVOICES.length-1?'border-b border-gray-50':''}">
+                  <td class="px-5 py-3.5 text-xs font-mono font-medium text-gray-700">${inv.id}</td>
+                  <td class="px-5 py-3.5 text-sm text-gray-800">${inv.client}</td>
+                  <td class="px-5 py-3.5 text-sm font-semibold text-gray-900">${fmt(inv.amt)}</td>
+                  <td class="px-5 py-3.5"><${Badge} s=${inv.status} /></td>
+                  <td class="px-5 py-3.5">
+                    ${inv.viewed
+                      ? html`<span class="flex items-center gap-1 text-xs text-emerald-600 font-medium"><${Ic} n="eye" size=${13}/>${inv.viewedAt}</span>`
+                      : html`<span class="flex items-center gap-1 text-xs text-gray-400"><${Ic} n="eyeoff" size=${13}/>Not opened</span>`}
+                  </td>
+                  <td class="px-5 py-3.5 text-xs text-gray-500">${inv.due}</td>
+                  <td class="px-5 py-3.5"><button class="text-xs text-indigo-600 font-medium">View</button></td>
+                </tr>`)}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="bg-gradient-to-r from-indigo-600 to-indigo-500 rounded-xl p-4 md:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <div class="text-white font-semibold text-sm">Connect your bank for direct payouts</div>
+            <div class="text-indigo-200 text-xs mt-0.5">Free standard (2 days) · 1% instant — better than PayPal's 1.5% fee</div>
+          </div>
+          <button class="bg-white text-indigo-600 text-xs font-semibold py-2.5 px-4 rounded-lg whitespace-nowrap flex-shrink-0">Connect Bank</button>
+        </div>
+      </div>
+    </div>`;
+};
+
+/* ── Invoice Builder ────────────────────────────────────────────────────── */
+const PAY_METHODS = [
+  {k:'card',  label:'Credit / Debit Card', sub:'2.9% + 30¢'},
+  {k:'paypal',label:'PayPal',              sub:'3.49% + 49¢'},
+  {k:'klarna',label:'Klarna (Pay Later)',   sub:'3.29% + 30¢'},
+  {k:'affirm',label:'Affirm (Financing)',   sub:'Varies'},
+];
+
+const InvoiceBuilder = ({ onBack }) => {
+  const [clientId, setClientId] = useState(1);
+  const [dueDate,  setDueDate]  = useState('Jun 28, 2024');
+  const [items,    setItems]    = useState([
+    {id:1,desc:'Site prep & grading (8 hrs)', qty:1,rate:850},
+    {id:2,desc:'Landscaping aggregate (bulk)',qty:3,rate:120},
+    {id:3,desc:'Equipment rental — full day', qty:1,rate:280},
+  ]);
+  const [taxRate, setTaxRate] = useState(9.25);
+  const [notes,   setNotes]   = useState('Payment due within 30 days. Thank you for your business!');
+  const [methods, setMethods] = useState({card:true,paypal:true,klarna:false,affirm:false});
+  const [nextId,  setNextId]  = useState(4);
+  const [tab,     setTab]     = useState('edit');
+
+  const client   = CLIENTS.find(c=>c.id===clientId);
+  const subtotal = items.reduce((s,i)=>s+i.qty*i.rate,0);
+  const tax      = subtotal*taxRate/100;
+  const total    = subtotal+tax;
+  const enabled  = PAY_METHODS.filter(m=>methods[m.k]).map(m=>m.label);
+
+  const addItem    = () => { setItems(it=>[...it,{id:nextId,desc:'',qty:1,rate:0}]); setNextId(n=>n+1); };
+  const removeItem = id => setItems(it=>it.filter(i=>i.id!==id));
+  const updItem    = (id,f,v) => setItems(it=>it.map(i=>i.id===id?{...i,[f]:(f==='qty'||f==='rate')?(parseFloat(v)||0):v}:i));
+  const toggleM    = k => setMethods(m=>({...m,[k]:!m[k]}));
+
+  const Form = html`
+    <div class="space-y-6 p-4 md:p-7 overflow-y-auto flex-1">
+      <div>
+        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Bill To</label>
+        <select value=${clientId} onChange=${e=>setClientId(Number(e.target.value))}
+          class="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm text-gray-900 bg-white">
+          ${CLIENTS.map(c=>html`<option key=${c.id} value=${c.id}>${c.name}</option>`)}
+        </select>
+        ${client && html`<div class="mt-2 text-xs text-gray-400 space-y-0.5 pl-1"><div>${client.email}</div><div>${client.addr}</div></div>`}
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Invoice Details</label>
+        <div class="grid grid-cols-3 gap-2">
+          <div><div class="text-xs text-gray-400 mb-1">Invoice #</div><input value="INV-0046" readOnly class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-400 bg-gray-50"/></div>
+          <div><div class="text-xs text-gray-400 mb-1">Issued</div><input value="May 29, 2024" readOnly class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-400 bg-gray-50"/></div>
+          <div>
+            <div class="text-xs text-gray-400 mb-1">Due Date</div>
+            <input value=${dueDate} onInput=${e=>setDueDate(e.target.value)} class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900"/>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Line Items</label>
+        <div class="space-y-2.5">
+          ${items.map(item => html`
+            <div key=${item.id} class="bg-gray-50 rounded-xl p-3 space-y-2">
+              <input value=${item.desc} onInput=${e=>updItem(item.id,'desc',e.target.value)} placeholder="Item description"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white"/>
+              <div class="flex gap-2 items-center">
+                <div class="flex-1">
+                  <div class="text-xs text-gray-400 mb-1">Qty</div>
+                  <input type="number" value=${item.qty} onInput=${e=>updItem(item.id,'qty',e.target.value)}
+                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white text-center"/>
+                </div>
+                <div class="flex-1">
+                  <div class="text-xs text-gray-400 mb-1">Rate ($)</div>
+                  <input type="number" value=${item.rate} onInput=${e=>updItem(item.id,'rate',e.target.value)}
+                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white"/>
+                </div>
+                <div class="text-right pt-4">
+                  <div class="text-sm font-semibold text-gray-900">${fmt(item.qty*item.rate)}</div>
+                  <button onClick=${()=>removeItem(item.id)} class="text-gray-300 mt-1 p-1"><${Ic} n="trash" size=${14}/></button>
+                </div>
+              </div>
+            </div>`)}
+        </div>
+        <button onClick=${addItem} class="mt-3 flex items-center gap-1.5 text-sm text-indigo-600 font-semibold py-2">
+          <${Ic} n="plus" size=${15}/>Add line item
+        </button>
+      </div>
+
+      <div class="flex items-center justify-between py-1">
+        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Tax Rate</label>
+        <div class="flex items-center gap-1.5">
+          <input type="number" value=${taxRate} onInput=${e=>setTaxRate(parseFloat(e.target.value)||0)}
+            class="w-20 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 text-right"/>
+          <span class="text-sm text-gray-400 font-medium">%</span>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Notes</label>
+        <textarea onInput=${e=>setNotes(e.target.value)} rows="3"
+          class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 resize-none">${notes}</textarea>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Accept Payments Via</label>
+        <div class="grid grid-cols-2 gap-2">
+          ${PAY_METHODS.map(m => html`
+            <button key=${m.k} onClick=${()=>toggleM(m.k)}
+              class="flex items-center gap-2 p-3 rounded-xl border-2 text-left transition-all ${methods[m.k]?'border-indigo-300 bg-indigo-50/60':'border-gray-200 bg-white'}">
+              <div class="w-4 h-4 rounded flex-shrink-0 flex items-center justify-center ${methods[m.k]?'bg-indigo-600':'border-2 border-gray-300'}">
+                ${methods[m.k] && html`<${Ic} n="check" size=${10} cls="text-white"/>`}
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-gray-800 leading-tight">${m.label}</div>
+                <div class="text-xs text-gray-400">${m.sub}</div>
+              </div>
+            </button>`)}
+        </div>
+      </div>
+    </div>`;
+
+  const Preview = html`
+    <div class="bg-gray-100 min-h-full flex items-start justify-center p-4 md:p-8 overflow-y-auto flex-1">
+      <div class="w-full max-w-xl">
+        <div class="hidden md:block text-xs text-gray-400 uppercase tracking-widest mb-4 text-center font-medium">Live Preview</div>
+        <div class="bg-white rounded-2xl paper p-6 md:p-10">
+          <div class="flex justify-between items-start mb-7">
+            <div>
+              <div class="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center mb-2.5">
+                <span class="text-indigo-600 font-bold text-sm">JB</span>
+              </div>
+              <div class="text-sm font-bold text-gray-900">Josh's Business</div>
+              <div class="text-xs text-gray-400 mt-0.5">Nashville, TN 37201</div>
+              <div class="text-xs text-gray-400">josh@joshsbusiness.com</div>
+            </div>
+            <div class="text-right">
+              <div class="text-3xl font-black text-indigo-600 leading-none">INVOICE</div>
+              <div class="text-xs text-gray-400 mt-2 font-mono">INV-0046</div>
+            </div>
+          </div>
+          <div class="grid grid-cols-3 bg-gray-50 rounded-xl p-3 mb-5 gap-2">
+            <div><div class="text-xs text-gray-400 mb-0.5">Issued</div><div class="text-xs font-semibold text-gray-700">May 29, 2024</div></div>
+            <div><div class="text-xs text-gray-400 mb-0.5">Due</div><div class="text-xs font-semibold text-gray-700">${dueDate}</div></div>
+            <div><div class="text-xs text-gray-400 mb-0.5">Amount Due</div><div class="text-sm font-bold text-indigo-600">${fmt(total)}</div></div>
+          </div>
+          <div class="mb-5">
+            <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Bill To</div>
+            ${client && html`<div>
+              <div class="text-sm font-semibold text-gray-900">${client.name}</div>
+              <div class="text-xs text-gray-500">${client.email}</div>
+              <div class="text-xs text-gray-500">${client.addr}</div>
+            </div>`}
+          </div>
+          <table class="w-full text-xs mb-1">
+            <thead><tr class="border-b-2 border-gray-200">
+              <th class="text-left text-xs font-semibold text-gray-400 pb-2">Description</th>
+              <th class="text-center text-xs font-semibold text-gray-400 pb-2 w-10">Qty</th>
+              <th class="text-right text-xs font-semibold text-gray-400 pb-2 w-20">Rate</th>
+              <th class="text-right text-xs font-semibold text-gray-400 pb-2 w-20">Amt</th>
+            </tr></thead>
+            <tbody>
+              ${items.map((item,i) => html`
+                <tr key=${item.id} class=${i%2===1?'bg-gray-50':''}>
+                  <td class="py-2 pr-2 text-gray-700">${item.desc||html`<span class="text-gray-300 italic">—</span>`}</td>
+                  <td class="py-2 text-center text-gray-600">${item.qty}</td>
+                  <td class="py-2 text-right text-gray-600">${fmt(item.rate)}</td>
+                  <td class="py-2 text-right font-semibold text-gray-800">${fmt(item.qty*item.rate)}</td>
+                </tr>`)}
+            </tbody>
+          </table>
+          <div class="border-t border-gray-200 pt-3 mt-1 space-y-1.5">
+            <div class="flex justify-between text-xs text-gray-500"><span>Subtotal</span><span>${fmt(subtotal)}</span></div>
+            <div class="flex justify-between text-xs text-gray-500"><span>Tax (${taxRate}%)</span><span>${fmt(tax)}</span></div>
+            <div class="flex justify-between text-sm font-bold text-gray-900 pt-2 border-t border-gray-200 mt-1">
+              <span>Total Due</span><span class="text-indigo-600">${fmt(total)}</span>
+            </div>
+          </div>
+          ${notes && html`<div class="mt-4 pt-3 border-t border-gray-100 text-xs text-gray-400 leading-relaxed">${notes}</div>`}
+          <div class="mt-5">
+            <button class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl text-sm">Pay ${fmt(total)}</button>
+            ${enabled.length>0 && html`<div class="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2.5">
+              ${enabled.map(m=>html`<span key=${m} class="text-xs text-gray-400">${m}</span>`)}
+            </div>`}
+            <div class="text-center text-xs text-gray-300 mt-2">Secured by Invoica · Powered by Stripe</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  return html`
+    <div class="flex flex-col h-screen overflow-hidden">
+      <div class="flex items-center gap-3 px-4 md:px-6 py-3.5 bg-white border-b border-gray-200 flex-shrink-0 sticky top-0 z-20">
+        <button onClick=${onBack} class="flex items-center gap-1.5 text-sm text-gray-500 font-medium min-h-[44px] pr-2">
+          <${Ic} n="back" size=${16}/>Back
+        </button>
+        <span class="text-gray-300 hidden md:block">|</span>
+        <span class="text-sm font-semibold text-gray-800 flex-1">New Invoice</span>
+        <div class="flex gap-2">
+          <button class="px-3 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-300 rounded-lg min-h-[38px]">Draft</button>
+          <button class="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-lg min-h-[38px]">
+            <${Ic} n="send" size=${13}/>Send
+          </button>
+        </div>
+      </div>
+
+      <div class="md:hidden flex border-b border-gray-200 bg-white flex-shrink-0">
+        ${['edit','preview'].map(t => html`
+          <button key=${t} onClick=${()=>setTab(t)}
+            class="flex-1 py-3 text-sm font-semibold capitalize transition-colors ${tab===t?'border-b-2 border-indigo-600 text-indigo-600':'text-gray-400'}">
+            ${t==='edit'?'Edit':'Preview'}
+          </button>`)}
+      </div>
+
+      <div class="flex-1 flex overflow-hidden">
+        <div class="${tab==='edit'?'flex':'hidden'} flex-col w-full md:flex md:w-[46%] md:border-r md:border-gray-200 bg-white overflow-y-auto">
+          ${Form}
+        </div>
+        <div class="${tab==='preview'?'flex':'hidden'} flex-col flex-1 w-full md:flex overflow-y-auto">
+          ${Preview}
+        </div>
+      </div>
+    </div>`;
+};
+
+/* ── Placeholder ────────────────────────────────────────────────────────── */
+const Placeholder = ({ label }) => html`
+  <div class="flex-1 flex items-center justify-center h-full bg-gray-50 pb-20 md:pb-0">
+    <div class="text-center px-8">
+      <div class="text-4xl mb-3">🚧</div>
+      <div class="text-sm font-semibold text-gray-400">${label} coming in Phase 2</div>
+    </div>
+  </div>`;
+
+/* ── App root ────────────────────────────────────────────────────────────── */
+const App = () => {
+  const [view,    setView]    = useState('dashboard');
+  const [builder, setBuilder] = useState(false);
+  const go = v => { setView(v); setBuilder(false); };
+
+  if (builder) return html`<${InvoiceBuilder} onBack=${()=>setBuilder(false)} />`;
+
+  return html`
+    <div class="flex h-screen overflow-hidden bg-gray-50">
+      <${Sidebar} view=${view} setView=${go} onNew=${()=>setBuilder(true)} />
+      <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+        ${view==='dashboard'
+          ? html`<${Dashboard} onNew=${()=>setBuilder(true)} />`
+          : html`<${Placeholder} label=${view.charAt(0).toUpperCase()+view.slice(1)} />`}
+        <${BottomNav} view=${view} setView=${go} onNew=${()=>setBuilder(true)} />
+      </div>
+    </div>`;
+};
+
+render(html`<${App} />`, document.getElementById('root'));
+</script>
+</body>
+</html>
