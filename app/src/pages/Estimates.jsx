@@ -3,6 +3,7 @@ import { FileText, Plus, Eye } from 'lucide-react'
 import { get } from '../api'
 import { Badge } from '../components/Badge'
 import { EmptyState } from '../components/EmptyState'
+import { EstimateViewer } from '../components/EstimateViewer'
 
 const fmt = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n ?? 0)
 const fmtDate = s => s ? new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
@@ -10,9 +11,10 @@ const fmtDate = s => s ? new Date(s).toLocaleDateString('en-US', { month: 'short
 const FILTERS = ['All', 'Draft', 'Sent', 'Approved', 'Declined']
 
 export function Estimates({ onNew }) {
-  const [estimates, setEstimates] = useState([])
-  const [loading,   setLoading]   = useState(true)
-  const [filter,    setFilter]    = useState('All')
+  const [estimates,   setEstimates]   = useState([])
+  const [loading,     setLoading]     = useState(true)
+  const [filter,      setFilter]      = useState('All')
+  const [viewingKey,  setViewingKey]  = useState(null)
 
   useEffect(() => {
     get('/api/estimates')
@@ -27,14 +29,23 @@ export function Estimates({ onNew }) {
 
   return (
     <>
+      {viewingKey && (
+        <EstimateViewer
+          jobKey={viewingKey}
+          onClose={() => setViewingKey(null)}
+        />
+      )}
+
       <div className="hidden md:flex items-center justify-between px-8 py-5 bg-white border-b border-gray-200 sticky top-0 z-10">
         <h1 className="text-lg font-semibold text-gray-900">Estimates</h1>
-        <button onClick={onNew} className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2 px-4 rounded-lg transition-colors">
+        <button onClick={onNew}
+          className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2 px-4 rounded-lg transition-colors">
           <Plus className="w-3.5 h-3.5" /> New Estimate
         </button>
       </div>
 
       <div className="px-4 md:px-8 py-4 md:py-6">
+        {/* Filter chips */}
         <div className="flex gap-2 overflow-x-auto pb-1 mb-4">
           {FILTERS.map(f => (
             <button key={f} onClick={() => setFilter(f)}
@@ -58,9 +69,11 @@ export function Estimates({ onNew }) {
             />
           ) : (
             <>
+              {/* Mobile cards */}
               <div className="md:hidden divide-y divide-gray-100">
                 {visible.map(est => (
-                  <div key={est.job_key} className="px-4 py-4">
+                  <div key={est.job_key} className="px-4 py-4 active:bg-gray-50"
+                    onClick={() => setViewingKey(est.job_key)}>
                     <div className="flex items-start justify-between gap-2 mb-1.5">
                       <div>
                         <div className="text-xs font-mono text-gray-400 mb-0.5">{est.estimate_number}</div>
@@ -83,6 +96,8 @@ export function Estimates({ onNew }) {
                   </div>
                 ))}
               </div>
+
+              {/* Desktop table */}
               <table className="hidden md:table w-full">
                 <thead>
                   <tr className="border-b border-gray-100">
@@ -93,7 +108,8 @@ export function Estimates({ onNew }) {
                 </thead>
                 <tbody>
                   {visible.map((est, i) => (
-                    <tr key={est.job_key} className={`hover:bg-gray-50 transition-colors ${i < visible.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                    <tr key={est.job_key}
+                      className={`hover:bg-gray-50 transition-colors ${i < visible.length - 1 ? 'border-b border-gray-50' : ''}`}>
                       <td className="px-5 py-3.5 text-xs font-mono font-medium text-gray-500">{est.estimate_number}</td>
                       <td className="px-5 py-3.5 text-sm text-gray-800">{est.client_name ?? <span className="text-gray-300 italic">—</span>}</td>
                       <td className="px-5 py-3.5 text-sm text-gray-500 max-w-[180px] truncate">{est.title ?? <span className="text-gray-300 italic">—</span>}</td>
@@ -106,7 +122,12 @@ export function Estimates({ onNew }) {
                         }
                       </td>
                       <td className="px-5 py-3.5 text-xs text-gray-500">{fmtDate(est.created_at)}</td>
-                      <td className="px-5 py-3.5"><button className="text-xs text-indigo-600 font-medium">View</button></td>
+                      <td className="px-5 py-3.5">
+                        <button onClick={() => setViewingKey(est.job_key)}
+                          className="text-xs text-indigo-600 font-medium hover:text-indigo-500">
+                          View
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
