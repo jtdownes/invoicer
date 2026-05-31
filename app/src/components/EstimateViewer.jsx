@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { X, Send, Printer, ChevronDown } from 'lucide-react'
-import { get, patch } from '../api'
+import { X, Send, Printer, ChevronDown, Copy, Check } from 'lucide-react'
+import { get, patch, post } from '../api'
 import { Badge } from './Badge'
 import { useAuth } from '../context/AuthContext'
 
@@ -8,7 +8,6 @@ const fmt = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: '
 
 const fmtDate = s => {
   if (!s) return '—'
-  // YYYY-MM-DD → treat as local date to avoid timezone shift
   if (/^\d{4}-\d{2}-\d{2}$/.test(String(s))) {
     const [y, m, d] = String(s).split('-')
     return new Date(+y, +m - 1, +d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -29,9 +28,12 @@ const STATUSES = ['draft', 'sent', 'approved', 'declined']
 
 export function EstimateViewer({ jobKey, onClose }) {
   const { user } = useAuth()
-  const [est,      setEst]      = useState(null)
-  const [loading,  setLoading]  = useState(true)
-  const [updating, setUpdating] = useState(false)
+  const [est,        setEst]        = useState(null)
+  const [loading,    setLoading]    = useState(true)
+  const [updating,   setUpdating]   = useState(false)
+  const [sending,    setSending]    = useState(false)
+  const [sendResult, setSendResult] = useState(null)
+  const [copied,     setCopied]     = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -53,8 +55,34 @@ export function EstimateViewer({ jobKey, onClose }) {
     }
   }
 
+  async function sendToCustomer() {
+    setSending(true)
+    try {
+      const result = await post(`/api/estimates/${jobKey}/send`, {})
+      setSendResult(result)
+      setEst(e => ({ ...e, status: 'sent', public_token: result.public_url?.split('/e/')[1] }))
+    } catch (err) {
+      console.error('Send failed:', err)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  function copyLink() {
+    const url = sendResult?.public_url
+      || (est?.public_token ? `${window.location.origin}/e/${est.public_token}` : null)
+    if (!url) return
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
   const businessName = user?.business_name || (user ? `${user.first_name} ${user.last_name}` : '')
   const initials     = businessName.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'Y'
+  const publicUrl    = sendResult?.public_url
+    || (est?.public_token ? `${window.location.origin}/e/${est.public_token}` : null)
+  const wasSent      = !!(est?.public_token || est?.sent_at)
 
   if (loading) {
     return (
@@ -73,9 +101,9 @@ export function EstimateViewer({ jobKey, onClose }) {
     )
   }
 
-  const displayDate  = est.estimate_date ? fmtDate(String(est.estimate_date).slice(0, 10)) : fmtDate(est.created_at)
-  const validUntil   = calcValidUntil(est)
-  const discountAmt  = parseFloat(est.discount_amount) || 0
+  const displayDate = est.estimate_date ? fmtDate(String(est.estimate_date).slice(0, 10)) : fmtDate(est.created_at)
+  const validUntil  = calcValidUntil(est)
+  const discountAmt = parseFloat(est.discount_amount) || 0
 
   return (
     <div className="fixed inset-0 z-50 bg-gray-100 flex flex-col">
@@ -88,6 +116,17 @@ export function EstimateViewer({ jobKey, onClose }) {
         <span className="font-mono text-xs font-medium text-gray-500">{est.estimate_number}</span>
         <Badge status={est.status} />
         <div className="flex-1" />
+
+        {/* Copy link — always visible once sent */}
+        {publicUrl && (
+          <button
+            onClick={copyLink}
+            className="hidden md:flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? 'Copied!' : 'Copy Link'}
+          </button>
+        )}
 
         {/* Status dropdown */}
         <div className="relative">
@@ -111,18 +150,38 @@ export function EstimateViewer({ jobKey, onClose }) {
           <Printer className="w-3.5 h-3.5" /> Print / PDF
         </button>
 
-        {est.status === 'draft' && (
-          <button
-            onClick={() => changeStatus('sent')}
-            disabled={updating}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-lg disabled:opacity-50 hover:bg-indigo-500"
-          >
-            <Send className="w-3 h-3" /> Mark Sent
-          </button>
-        )}
+        {/* Send / Resend — primary action, always visible */}
+        <button
+          onClick={sendToCustomer}
+          disabled={sending || updating}
+          className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-lg disabled:opacity-50 hover:bg-indigo-500"
+        >
+          <Send className="w-3 h-3" />
+          {sending ? 'Sending…' : wasSent ? 'Resend Email' : 'Send to Customer'}
+        </button>
       </div>
 
-      {/* ── Estimate document ─────────────────────────────────────────────────── */}
+      {/* ── Send result banner ────────────────────────────────────────── */}
+      {sendResult && (
+        <div className="print:hidden flex items-center gap-3 px-4 md:px-6 py-2.5 bg-emerald-50 border-b border-emerald-200 flex-shrink-0">
+          <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+          <div className="flex-1 text-xs text-emerald-700">
+            {sendResult.email_sent
+              ? <>Email sent to <strong>{sendResult.to_email}</strong></>
+              : sendResult.to_email
+                ? <>Email API key not configured — share the link manually</>
+                : <>Client has no email on file — share the link manually</>
+            }
+          </div>
+          <button onClick={copyLink}
+            className="flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-white border border-emerald-200 rounded-lg px-2.5 py-1">
+            {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+            {copied ? 'Copied' : 'Copy Link'}
+          </button>
+        </div>
+      )}
+
+      {/* ── Estimate document ───────────────────────────────────────────────── */}
       <div className="flex-1 overflow-auto p-4 md:p-8 print:p-0 print:overflow-visible">
         <div className="w-full max-w-xl mx-auto">
           <div className="bg-white rounded-2xl shadow-[0_0_0_1px_rgba(0,0,0,.06),0_4px_6px_-1px_rgba(0,0,0,.07),0_12px_40px_rgba(0,0,0,.06)] p-6 md:p-10 print:shadow-none print:rounded-none">
@@ -143,14 +202,12 @@ export function EstimateViewer({ jobKey, onClose }) {
               </div>
             </div>
 
-            {/* Date / validity / total */}
             <div className="grid grid-cols-3 bg-gray-50 rounded-xl p-3 mb-5 gap-2">
               <div><div className="text-xs text-gray-400 mb-0.5">Date</div><div className="text-xs font-semibold text-gray-700">{displayDate}</div></div>
               <div><div className="text-xs text-gray-400 mb-0.5">Valid Until</div><div className="text-xs font-semibold text-gray-700">{validUntil}</div></div>
               <div><div className="text-xs text-gray-400 mb-0.5">Total</div><div className="text-sm font-bold text-indigo-600">{fmt(est.total)}</div></div>
             </div>
 
-            {/* Prepared for */}
             <div className="mb-5">
               <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Prepared For</div>
               {est.client_name
@@ -164,14 +221,12 @@ export function EstimateViewer({ jobKey, onClose }) {
               }
             </div>
 
-            {/* Title */}
             {est.title && (
               <div className="mb-4 pb-4 border-b border-gray-100">
                 <div className="text-sm font-semibold text-gray-800">{est.title}</div>
               </div>
             )}
 
-            {/* Line items */}
             <table className="w-full text-xs mb-1">
               <thead>
                 <tr className="border-b-2 border-gray-200">
@@ -193,11 +248,8 @@ export function EstimateViewer({ jobKey, onClose }) {
               </tbody>
             </table>
 
-            {/* Totals */}
             <div className="border-t border-gray-200 pt-3 mt-1 space-y-1.5">
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>Subtotal</span><span>{fmt(est.subtotal)}</span>
-              </div>
+              <div className="flex justify-between text-xs text-gray-500"><span>Subtotal</span><span>{fmt(est.subtotal)}</span></div>
               {discountAmt > 0 && (
                 <div className="flex justify-between text-xs text-gray-500">
                   <span>Discount {est.discount_type === 'percent' ? `(${est.discount_value}%)` : ''}</span>
@@ -214,14 +266,10 @@ export function EstimateViewer({ jobKey, onClose }) {
               </div>
             </div>
 
-            {/* Notes */}
             {est.notes && (
-              <div className="mt-4 pt-3 border-t border-gray-100 text-xs text-gray-500 leading-relaxed">
-                {est.notes}
-              </div>
+              <div className="mt-4 pt-3 border-t border-gray-100 text-xs text-gray-500 leading-relaxed">{est.notes}</div>
             )}
 
-            {/* Terms */}
             {est.terms && (
               <div className="mt-4 pt-3 border-t border-gray-100">
                 <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Terms &amp; Conditions</div>
@@ -229,7 +277,6 @@ export function EstimateViewer({ jobKey, onClose }) {
               </div>
             )}
 
-            {/* Signature */}
             <div className="mt-6 pt-4 border-t-2 border-dashed border-gray-200">
               <div className="text-xs text-gray-400 mb-4">By signing below, you agree to the terms of this estimate and authorize work to begin upon deposit.</div>
               <div className="flex gap-6">
