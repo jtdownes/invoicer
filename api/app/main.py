@@ -9,6 +9,7 @@ from .clients.router import router as clients_router
 from .config import CORS_ORIGINS, FIRST_INVITE_TOKEN
 from .estimates.router import router as estimates_router
 from .invoices.router import router as invoices_router
+from .public.router import router as public_router
 
 logging.basicConfig(level=logging.INFO)
 
@@ -27,6 +28,7 @@ app.include_router(invite_router)
 app.include_router(clients_router)
 app.include_router(estimates_router)
 app.include_router(invoices_router)
+app.include_router(public_router)
 
 
 @app.on_event("startup")

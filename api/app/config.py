@@ -21,3 +21,8 @@ JWT_EXPIRE_DAYS = int(os.environ.get("JWT_EXPIRE_DAYS", "7"))
 
 FIRST_INVITE_TOKEN = os.environ.get("FIRST_INVITE_TOKEN", "")
 CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://192.168.1.10:7862").split(",")
+
+RESEND_API_KEY    = os.environ.get("RESEND_API_KEY", "")
+RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "noreply@invoicer.jtdownes.com")
+RESEND_FROM_NAME  = os.environ.get("RESEND_FROM_NAME", "Invoicer")
+APP_BASE_URL      = os.environ.get("APP_BASE_URL", "https://invoicer.jtdownes.com")
