@@ -27,15 +27,8 @@ export function Layout({ children, view, setView, onNew }) {
       {/* ── Desktop Sidebar ─────────────────────────────────────────── */}
       <aside className="hidden md:flex flex-col flex-shrink-0 bg-slate-900 h-screen" style={{ width: 220 }}>
 
-        {/* Logo */}
-        <div className="px-5 py-5 flex items-center gap-2.5">
-          <div className="w-7 h-7 bg-indigo-500 rounded-lg flex items-center justify-center">
-            <DollarSign className="w-3.5 h-3.5 text-white" />
-          </div>
-        </div>
-
         {/* New Estimate button */}
-        <div className="px-3 mb-4">
+        <div className="px-3 mt-5 mb-4">
           <button
             onClick={onNew}
             className="w-full flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2.5 rounded-lg transition-colors"
