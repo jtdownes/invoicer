@@ -3,11 +3,11 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { Layout } from './components/Layout'
 import { Dashboard } from './pages/Dashboard'
-import { Invoices } from './pages/Invoices'
+import { Estimates } from './pages/Estimates'
 import { Clients } from './pages/Clients'
 import Login from './pages/Login'
 import Register from './pages/Register'
-import { InvoiceBuilder } from './pages/InvoiceBuilder'
+import { EstimateBuilder } from './pages/EstimateBuilder'
 
 function SettingsPage() {
   const { user, logout } = useAuth()
@@ -40,13 +40,13 @@ function AppShell() {
   const [view,     setView]     = useState('dashboard')
   const [building, setBuilding] = useState(false)
 
-  if (building) return <InvoiceBuilder onBack={() => setBuilding(false)} />
+  if (building) return <EstimateBuilder onBack={() => setBuilding(false)} />
 
   return (
     <Layout view={view} setView={setView} onNew={() => setBuilding(true)}>
-      {view === 'dashboard' && <Dashboard onNew={() => setBuilding(true)} />}
-      {view === 'invoices'  && <Invoices  onNew={() => setBuilding(true)} />}
-      {view === 'clients'   && <Clients   onNewInvoice={() => setBuilding(true)} />}
+      {view === 'dashboard' && <Dashboard  onNew={() => setBuilding(true)} />}
+      {view === 'estimates' && <Estimates  onNew={() => setBuilding(true)} />}
+      {view === 'clients'   && <Clients    onNew={() => setBuilding(true)} />}
       {view === 'settings'  && <SettingsPage />}
     </Layout>
   )

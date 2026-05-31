@@ -3,14 +3,14 @@ import { useAuth } from '../context/AuthContext'
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', Icon: LayoutGrid },
-  { id: 'invoices',  label: 'Invoices',  Icon: FileText  },
-  { id: 'clients',   label: 'Clients',   Icon: Users     },
-  { id: 'settings',  label: 'Settings',  Icon: Settings  },
+  { id: 'estimates', label: 'Estimates', Icon: FileText   },
+  { id: 'clients',   label: 'Clients',   Icon: Users      },
+  { id: 'settings',  label: 'Settings',  Icon: Settings   },
 ]
 
 const VIEW_TITLE = {
-  dashboard: 'Invoica',
-  invoices:  'Invoices',
+  dashboard: 'Dashboard',
+  estimates: 'Estimates',
   clients:   'Clients',
   settings:  'Settings',
 }
@@ -32,16 +32,15 @@ export function Layout({ children, view, setView, onNew }) {
           <div className="w-7 h-7 bg-indigo-500 rounded-lg flex items-center justify-center">
             <DollarSign className="w-3.5 h-3.5 text-white" />
           </div>
-          <span className="text-white font-semibold text-sm">Invoica</span>
         </div>
 
-        {/* New Invoice button */}
+        {/* New Estimate button */}
         <div className="px-3 mb-4">
           <button
             onClick={onNew}
             className="w-full flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2.5 rounded-lg transition-colors"
           >
-            <Plus className="w-3.5 h-3.5" /> New Invoice
+            <Plus className="w-3.5 h-3.5" /> New Estimate
           </button>
         </div>
 
@@ -86,7 +85,7 @@ export function Layout({ children, view, setView, onNew }) {
             <div className="w-7 h-7 bg-indigo-500 rounded-lg flex items-center justify-center">
               <DollarSign className="w-3 h-3 text-white" />
             </div>
-            <span className="font-semibold text-sm text-gray-900">{VIEW_TITLE[view] ?? 'Invoica'}</span>
+            <span className="font-semibold text-sm text-gray-900">{VIEW_TITLE[view] ?? 'App'}</span>
           </div>
           <div className="flex items-center gap-2">
             <button className="relative p-2 text-gray-400">
@@ -119,7 +118,6 @@ export function Layout({ children, view, setView, onNew }) {
                 <span className="text-xs font-medium">{label}</span>
               </button>
             ))}
-            {/* Center + button */}
             <button onClick={onNew} className="flex flex-col items-center pb-1 px-2 -mt-4">
               <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg shadow-indigo-200">
                 <Plus className="w-6 h-6 text-white" />
