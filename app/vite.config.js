@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
-    allowedHosts: ['invoicer.jtdownes.com', '.jtdownes.com', 'localhost', '127.0.0.1'],
+    allowedHosts: ['crewbill.app', 'localhost', '127.0.0.1'],
     hmr: { clientPort: 443, protocol: 'wss' },
     proxy: {
       '/api': {
