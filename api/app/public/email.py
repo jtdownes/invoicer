@@ -40,7 +40,7 @@ def _valid_until(est: dict) -> str:
 
 def build_estimate_email(est: dict, owner: dict, public_url: str) -> str:
     """Return the HTML for the estimate email."""
-    business_name = owner.get("business_name") or f"{owner.get('first_name','')}\ {owner.get('last_name','')}".strip() or "Your Contractor"
+    business_name = owner.get("business_name") or f"{owner.get('first_name', '')} {owner.get('last_name', '')}".strip() or "Your Contractor"
     client_name   = est.get("client_name") or "there"
     title         = est.get("title") or ""
     total         = _fmt_currency(est.get("total"))
@@ -144,7 +144,7 @@ def send_estimate_email(est: dict, owner: dict, public_url: str, to_email: str) 
 
         business_name = (
             owner.get("business_name")
-            or f"{owner.get('first_name','')}\ {owner.get('last_name','')}".strip()
+            or f"{owner.get('first_name', '')} {owner.get('last_name', '')}".strip()
             or RESEND_FROM_NAME
         )
         from_address = owner.get("business_email") or RESEND_FROM_EMAIL
@@ -182,7 +182,7 @@ def send_approval_notification(est: dict, owner: dict, signer_name: str) -> bool
 
         business_name = (
             owner.get("business_name")
-            or f"{owner.get('first_name','')}\ {owner.get('last_name','')}".strip()
+            or f"{owner.get('first_name', '')} {owner.get('last_name', '')}".strip()
             or "Your Business"
         )
         client_name = est.get("client_name") or "Your client"

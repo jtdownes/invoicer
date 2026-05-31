@@ -8,6 +8,7 @@ import { Clients } from './pages/Clients'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import { EstimateBuilder } from './pages/EstimateBuilder'
+import PublicEstimate from './pages/PublicEstimate'
 
 function SettingsPage() {
   const { user, logout, updateUser } = useAuth()
@@ -181,6 +182,7 @@ export default function App() {
         <Routes>
           <Route path="/login"    element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
           <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
+          <Route path="/e/:token" element={<PublicEstimate />} />
           <Route path="/app"      element={<ProtectedRoute><AppShell /></ProtectedRoute>} />
           <Route path="*"         element={<Navigate to="/login" replace />} />
         </Routes>

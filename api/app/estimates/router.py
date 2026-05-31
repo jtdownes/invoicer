@@ -1,12 +1,14 @@
 import logging
+import uuid
 from datetime import date as DateType
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from ..db import execute, query_all, query_one
 from ..dependencies import get_current_user
+from ..config import APP_BASE_URL
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/estimates")
@@ -166,6 +168,52 @@ def get_estimate(job_key: int, user: dict = Depends(get_current_user)):
     result = dict(est)
     result["line_items"] = [dict(i) for i in items]
     return result
+
+
+@router.post("/{job_key}/send")
+def send_estimate(job_key: int, request: Request, user: dict = Depends(get_current_user)):
+    est = query_one(
+        """
+        SELECT e.*, c.name AS client_name, c.email AS client_email
+        FROM estimates.jobs e
+        LEFT JOIN clients.directory c USING (client_key)
+        WHERE e.job_key = %s AND e.created_by = %s
+        """,
+        (job_key, user["user_key"]),
+    )
+    if not est:
+        raise HTTPException(status_code=404, detail="Estimate not found")
+
+    est = dict(est)
+
+    # Generate or reuse public token
+    token = est.get("public_token") or str(uuid.uuid4())
+    public_url = f"{APP_BASE_URL}/e/{token}"
+    to_email = est.get("client_email")
+
+    execute(
+        """
+        UPDATE estimates.jobs
+        SET status = 'sent', sent_at = NOW(),
+            public_token = %s,
+            sent_to_email = %s,
+            updated_at = NOW()
+        WHERE job_key = %s AND created_by = %s
+        """,
+        (token, to_email, job_key, user["user_key"]),
+    )
+
+    email_sent = False
+    if to_email:
+        from ..public.email import send_estimate_email
+        email_sent = send_estimate_email(est, user, public_url, to_email)
+
+    return {
+        "ok": True,
+        "public_url": public_url,
+        "email_sent": email_sent,
+        "to_email": to_email,
+    }
 
 
 @router.patch("/{job_key}/status")
