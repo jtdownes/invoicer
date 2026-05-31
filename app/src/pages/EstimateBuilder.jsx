@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, Send, Plus, Trash2, UserPlus, X } from 'lucide-react'
-import { get, post, patch } from '../api'
+import { ArrowLeft, Send, Plus, Trash2, UserPlus, X, Copy, Check } from 'lucide-react'
+import { get, post } from '../api'
 import { useAuth } from '../context/AuthContext'
 
 const fmt = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n ?? 0)
@@ -55,6 +55,8 @@ export function EstimateBuilder({ onBack }) {
   const [tab,           setTab]           = useState('edit')
   const [saving,        setSaving]        = useState(false)
   const [saveError,     setSaveError]     = useState('')
+  const [sentResult,    setSentResult]    = useState(null)
+  const [copied,        setCopied]        = useState(false)
 
   useEffect(() => {
     get('/api/clients')
@@ -120,13 +122,26 @@ export function EstimateBuilder({ onBack }) {
         })),
       }
       const est = await post('/api/estimates', payload)
-      if (andSend) await patch(`/api/estimates/${est.job_key}/status`, { status: 'sent' })
-      onBack()
+      if (andSend) {
+        const result = await post(`/api/estimates/${est.job_key}/send`, {})
+        setSentResult(result)
+        setTimeout(() => onBack(), 4000)
+      } else {
+        onBack()
+      }
     } catch (err) {
       setSaveError(err.message || 'Failed to save estimate')
     } finally {
       setSaving(false)
     }
+  }
+
+  function copyLink() {
+    if (!sentResult?.public_url) return
+    navigator.clipboard.writeText(sentResult.public_url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
   }
 
   const businessName = user?.business_name || (user ? `${user.first_name} ${user.last_name}` : '')
@@ -268,7 +283,6 @@ export function EstimateBuilder({ onBack }) {
       <div className="flex items-center justify-between py-1">
         <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Discount</label>
         <div className="flex items-center gap-1.5">
-          {/* Toggle */}
           <div className="flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5">
             <button type="button" onClick={() => setDiscountType('percent')}
               className={`text-xs font-semibold px-2.5 py-1 rounded-md transition-colors ${discountType === 'percent' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
@@ -300,14 +314,13 @@ export function EstimateBuilder({ onBack }) {
     </div>
   )
 
-  // ── Preview ────────────────────────────────────────────────────────────────────────────────
+  // ── Preview ───────────────────────────────────────────────────────────────────────────────
   const Preview = (
     <div className="bg-gray-100 min-h-full flex items-start justify-center p-4 md:p-8 overflow-y-auto flex-1">
       <div className="w-full max-w-xl">
         <div className="hidden md:block text-xs text-gray-400 uppercase tracking-widest mb-4 text-center font-medium">Live Preview</div>
         <div className="bg-white rounded-2xl shadow-[0_0_0_1px_rgba(0,0,0,.06),0_4px_6px_-1px_rgba(0,0,0,.07),0_12px_40px_rgba(0,0,0,.06)] p-6 md:p-10">
 
-          {/* Header */}
           <div className="flex justify-between items-start mb-7">
             <div>
               <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center mb-2.5">
@@ -323,14 +336,12 @@ export function EstimateBuilder({ onBack }) {
             </div>
           </div>
 
-          {/* Date row */}
           <div className="grid grid-cols-3 bg-gray-50 rounded-xl p-3 mb-5 gap-2">
             <div><div className="text-xs text-gray-400 mb-0.5">Date</div><div className="text-xs font-semibold text-gray-700">{fmtLocalDate(estimateDate)}</div></div>
             <div><div className="text-xs text-gray-400 mb-0.5">Valid Until</div><div className="text-xs font-semibold text-gray-700">{addDays(estimateDate, validDays)}</div></div>
             <div><div className="text-xs text-gray-400 mb-0.5">Total</div><div className="text-sm font-bold text-indigo-600">{fmt(total)}</div></div>
           </div>
 
-          {/* Prepared for */}
           <div className="mb-5">
             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Prepared For</div>
             {selectedClient
@@ -344,10 +355,8 @@ export function EstimateBuilder({ onBack }) {
             }
           </div>
 
-          {/* Title */}
           {title && <div className="mb-4 pb-4 border-b border-gray-100"><div className="text-sm font-semibold text-gray-800">{title}</div></div>}
 
-          {/* Line items table */}
           <table className="w-full text-xs mb-1">
             <thead>
               <tr className="border-b-2 border-gray-200">
@@ -369,7 +378,6 @@ export function EstimateBuilder({ onBack }) {
             </tbody>
           </table>
 
-          {/* Totals */}
           <div className="border-t border-gray-200 pt-3 mt-1 space-y-1.5">
             <div className="flex justify-between text-xs text-gray-500"><span>Subtotal</span><span>{fmt(subtotal)}</span></div>
             {discountValue > 0 && (
@@ -388,10 +396,8 @@ export function EstimateBuilder({ onBack }) {
             </div>
           </div>
 
-          {/* Notes */}
           {notes && <div className="mt-4 pt-3 border-t border-gray-100 text-xs text-gray-500 leading-relaxed">{notes}</div>}
 
-          {/* Terms */}
           {terms && (
             <div className="mt-4 pt-3 border-t border-gray-100">
               <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Terms &amp; Conditions</div>
@@ -399,7 +405,6 @@ export function EstimateBuilder({ onBack }) {
             </div>
           )}
 
-          {/* Signature lines */}
           <div className="mt-6 pt-4 border-t-2 border-dashed border-gray-200">
             <div className="text-xs text-gray-400 mb-4">By signing below, you agree to the terms of this estimate and authorize work to begin upon deposit.</div>
             <div className="flex gap-6">
@@ -422,12 +427,24 @@ export function EstimateBuilder({ onBack }) {
         <span className="hidden md:block text-gray-300">|</span>
         <span className="text-sm font-semibold text-gray-800 flex-1">New Estimate</span>
         {saveError && <span className="text-xs text-red-500">{saveError}</span>}
+        {sentResult && (
+          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
+            <Check className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+            <span className="text-xs text-emerald-700 font-medium">
+              {sentResult.email_sent ? `Sent to ${sentResult.to_email}` : 'Saved — share link:'}
+            </span>
+            <button onClick={copyLink} className="flex items-center gap-1 text-xs text-emerald-700 font-semibold">
+              {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+              {copied ? 'Copied!' : 'Copy Link'}
+            </button>
+          </div>
+        )}
         <div className="flex gap-2">
-          <button onClick={() => save(false)} disabled={saving}
+          <button onClick={() => save(false)} disabled={saving || !!sentResult}
             className="px-3 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-300 rounded-lg min-h-[38px] disabled:opacity-50">
             {saving ? 'Saving…' : 'Save Draft'}
           </button>
-          <button onClick={() => save(true)} disabled={saving}
+          <button onClick={() => save(true)} disabled={saving || !!sentResult}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-lg min-h-[38px] disabled:opacity-50">
             <Send className="w-3 h-3" />{saving ? 'Sending…' : 'Send Estimate'}
           </button>
