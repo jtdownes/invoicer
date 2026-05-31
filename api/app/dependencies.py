@@ -18,7 +18,8 @@ def get_current_user(access_token: str = Cookie(default=None)) -> dict:
 
     user = query_one(
         """
-        SELECT c.user_key, p.email, p.first_name, p.last_name, p.phone_number, p.role
+        SELECT c.user_key, p.email, p.first_name, p.last_name, p.phone_number, p.role,
+               p.business_name, p.business_phone, p.business_address
         FROM users.credentials c
         JOIN users.profiles p USING (user_key)
         WHERE c.user_key = %s AND c.is_active = TRUE

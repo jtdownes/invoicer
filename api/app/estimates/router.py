@@ -1,4 +1,5 @@
 import logging
+from datetime import date as DateType
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -21,7 +22,10 @@ class LineItemIn(BaseModel):
 class EstimateCreate(BaseModel):
     client_key: Optional[int] = None
     title: Optional[str] = None
+    estimate_date: Optional[DateType] = None
     tax_rate: float = 0.0
+    discount_type: str = 'percent'
+    discount_value: float = 0.0
     notes: Optional[str] = None
     terms: Optional[str] = None
     valid_days: int = 30
@@ -45,10 +49,10 @@ def get_dashboard(user: dict = Depends(get_current_user)):
     stats = query_one(
         """
         SELECT
-            COUNT(*)                                                         AS total_count,
-            COUNT(*) FILTER (WHERE status IN ('draft','sent'))               AS pending_count,
-            COUNT(*) FILTER (WHERE status = 'approved')                      AS approved_count,
-            COALESCE(SUM(total) FILTER (WHERE status = 'approved'), 0)       AS approved_total,
+            COUNT(*)                                                          AS total_count,
+            COUNT(*) FILTER (WHERE status IN ('draft','sent'))                AS pending_count,
+            COUNT(*) FILTER (WHERE status = 'approved')                       AS approved_count,
+            COALESCE(SUM(total) FILTER (WHERE status = 'approved'), 0)        AS approved_total,
             COALESCE(SUM(total) FILTER (WHERE status IN ('draft','sent')), 0) AS pending_total
         FROM estimates.jobs
         WHERE created_by = %s
@@ -93,9 +97,16 @@ def list_estimates(user: dict = Depends(get_current_user)):
 
 @router.post("")
 def create_estimate(body: EstimateCreate, user: dict = Depends(get_current_user)):
-    subtotal   = round(sum(i.quantity * i.unit_price for i in body.line_items), 2)
-    tax_amount = round(subtotal * body.tax_rate / 100, 2)
-    total      = round(subtotal + tax_amount, 2)
+    subtotal = round(sum(i.quantity * i.unit_price for i in body.line_items), 2)
+
+    if body.discount_type == 'percent':
+        discount_amount = round(subtotal * body.discount_value / 100, 2)
+    else:
+        discount_amount = round(min(float(body.discount_value), subtotal), 2)
+
+    discounted = round(subtotal - discount_amount, 2)
+    tax_amount = round(discounted * body.tax_rate / 100, 2)
+    total      = round(discounted + tax_amount, 2)
     est_num    = _next_number()
 
     est = execute(
@@ -103,13 +114,16 @@ def create_estimate(body: EstimateCreate, user: dict = Depends(get_current_user)
         INSERT INTO estimates.jobs
             (estimate_number, client_key, title, status,
              subtotal, tax_rate, tax_amount, total,
-             notes, terms, valid_days, created_by)
-        VALUES (%s, %s, %s, 'draft', %s, %s, %s, %s, %s, %s, %s, %s)
+             discount_type, discount_value, discount_amount,
+             notes, terms, valid_days, estimate_date, created_by)
+        VALUES (%s, %s, %s, 'draft', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING job_key, estimate_number, status, created_at
         """,
         (est_num, body.client_key, body.title or None,
          subtotal, body.tax_rate, tax_amount, total,
+         body.discount_type, body.discount_value, discount_amount,
          body.notes or None, body.terms or None, body.valid_days,
+         body.estimate_date or None,
          user["user_key"]),
         returning=True,
     )
